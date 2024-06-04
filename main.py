@@ -2,12 +2,11 @@ from random import randint
 
 MINE = -1
 EMPTY = 0
-OPENED = 9
 HIDDEN = -2
 MARKED = -3
 
-SIZE = 9
-MINE_COUNT = 10
+SIZE = 16
+MINE_COUNT = 40
 MAIN_TABLE = [[EMPTY for _ in range(SIZE)] for _ in range(SIZE)]
 PLAYER_TABLE = [[HIDDEN for _ in range(SIZE)] for _ in range(SIZE)]
 
@@ -58,26 +57,28 @@ def place_numbers(_table: list[list[int]]):
 
 
 def show_table(_table: list[list[int]]):
-    for row in _table:
-        for col in row:
+    for row in range(len(_table)):
+        for col in _table[row]:
             print(f'{col:>2} ', end='')
         print()
 
 
-def all_hidden(_player_table: list[list[int]]):
+def get_count(_player_table: list[list[int]], flag: int):
+    count = 0
     for row in _player_table:
         for col in row:
-            if col != HIDDEN:
-                return False
-    return True
+            if col == flag:
+                count += 1
+    return count
 
 
 def open_cell(_main_table: list[list[int]], _player_table: list[list[int]], _row: int, _col: int) -> bool:
-    if all_hidden(_player_table):
+    if get_count(_player_table, HIDDEN) == len(_main_table) * len(_main_table[_row]):
         place_mines(_main_table, MINE_COUNT, exclude=[(_row, _col), *neighbour_cells(_main_table, _row, _col)])
         place_numbers(_main_table)
 
     if _main_table[_row][_col] == MINE:
+        PLAYER_TABLE[_row][_col] = MINE
         return False
 
     def flood_fill(__row, __col, visited=None):
@@ -97,9 +98,38 @@ def open_cell(_main_table: list[list[int]], _player_table: list[list[int]], _row
     return True
 
 
-def main():
-    open_cell(MAIN_TABLE, PLAYER_TABLE, 0, 0)
+def mark_cell(_player_table: list[list[int]], _row: int, _col: int):
+    if _player_table[_row][_col] == HIDDEN:
+        _player_table[_row][_col] = MARKED
+        return None
+    if _player_table[_row][_col] == MARKED:
+        _player_table[_row][_col] = HIDDEN
+        return None
+
+
+def loop():
     show_table(PLAYER_TABLE)
+    user_input = input('Mode (o/m), Row, Col: ')
+    mode, row, column = (i.strip() for i in user_input.split(','))
+    row, column = int(row), int(column)
+
+    if mode == 'o':
+        result = open_cell(MAIN_TABLE, PLAYER_TABLE, row, column)
+        if not result:
+            print(-1)
+            return False
+
+    if mode == 'm':
+        mark_cell(PLAYER_TABLE, row, column)
+
+    return True
+
+
+def main():
+    while loop():
+        if get_count(PLAYER_TABLE, HIDDEN) == 0 and get_count(PLAYER_TABLE, MARKED) == MINE_COUNT:
+            print(1)
+            break
 
 
 if __name__ == '__main__':
